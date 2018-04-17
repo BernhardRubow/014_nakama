@@ -195,4 +195,11 @@ public class NakamaSessionManager : MonoBehaviour {
       LoginOrRegisterEmail();
     }
   }
+
+  public void MatchMake(int numberOfPlayers, Action<INMatchmakeTicket> success, Action<INError> failure){
+    var message = NMatchmakeAddMessage.Default(numberOfPlayers);
+    _client.Send(message, success, failure);
+  }
+
+
 }
