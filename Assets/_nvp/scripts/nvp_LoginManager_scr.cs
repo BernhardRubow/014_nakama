@@ -7,62 +7,107 @@ using System;
 
 using Nakama;
 
-public class nvp_LoginManager_scr : MonoBehaviour {
+public class nvp_LoginManager_scr : MonoBehaviour
+{
 
-	// +++ inspector fields +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	[SerializeField] InputField _user;
-	[SerializeField] InputField _password;
-
-
-
-
-	// +++ fields +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	INMatchmakeTicket _matchMakeTicket;
-	string _cancelMatchTicket;
+  // +++ inspector fields +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  [SerializeField] InputField _user;
+  [SerializeField] InputField _password;
 
 
 
+
+  // +++ fields +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  INMatchmakeTicket _matchMakeTicket;
+  string _cancelMatchTicket;
+	string _msg;
+	string _lastMsg;
 
 	
-	// +++ custom methods +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	public void Login(){
-		Debug.Log("Login pressed");
-		Debug.Log(_user.text);
-		Debug.Log(_password.text);
-
-		NakamaSessionManager
-			.GetInstance()
-			.SetUser(_user.text, _password.text)
-			.SetConnectCallback(OnConnectSuccess, OnConnectFailure)
-			.Connect();			
+	void Update()
+	{
+		if(_lastMsg != _msg){
+			_lastMsg = _msg;
+			nvp_DebugText_scr.GetInstance().ChangeDebugText(_msg);
+		}
 	}
 
-	private void MakeMatch(int numberOfPlayers){
-		NakamaSessionManager
-			.GetInstance()
-			.MatchMake(2, OnMatchMakeSuccess, OnMatchMakeFailure);
-	}
 
-	// +++ event handler ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		private void OnConnectSuccess(){
-		Debug.Log("OnConnected custom");
 
-		// Request opponents
-		MakeMatch(2);
-	}
-	private void OnConnectFailure(){
-		Debug.Log("OnError custom");
-	}
+  // +++ custom methods +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  public void Login()
+  {
+    Debug.Log("Login pressed");
+    Debug.Log(_user.text);
+    Debug.Log(_password.text);
 
-	private void OnMatchMakeSuccess(INMatchmakeTicket matchTicket){
-		_matchMakeTicket = matchTicket;
-		_cancelMatchTicket = _matchMakeTicket.Ticket;
-		Debug.Log("Added user to matchmaker pool.");
-	}
+    NakamaSessionManager
+      .GetInstance()
+      .SetUser(_user.text, _password.text)
+      .SetConnectCallback(OnConnectSuccess, OnConnectFailure)
+      .Connect();
+  }
 
-	private void OnMatchMakeFailure(INError err){
-		Debug.LogErrorFormat("Error: code '{0}' with '{1}'.", err.Code, err.Message);
-	}
+  private void MakeMatch(int numberOfPlayers)
+  {
+    NakamaSessionManager
+      .GetInstance()
+      .SubscribeOnMatchMakeMatch(OnMatchMakeMatched)
+      .MatchMake(2, OnMatchMakeSuccess, OnMatchMakeFailure);
+  }
+
+  // +++ event handler ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  private void OnConnectSuccess()
+  {
+    Debug.Log("OnConnected custom");
+
+    // Request opponents
+    MakeMatch(2);
+  }
+  private void OnConnectFailure()
+  {
+    Debug.Log("OnError custom");
+  }
+
+  private void OnMatchMakeSuccess(INMatchmakeTicket matchTicket)
+  {
+    _matchMakeTicket = matchTicket;
+    _cancelMatchTicket = _matchMakeTicket.Ticket;
+		_msg = "Added user to matchmaker pool.";
+    Debug.Log(_msg);
+		
+  }
+
+  private void OnMatchMakeFailure(INError err)
+  {
+		_msg = string.Format("Error: code '{0}' with '{1}'.", err.Code, err.Message);
+    Debug.Log(_msg);
+		
+  }
+
+  private void OnMatchMakeMatched(INMatchmakeMatched matched)
+  {
+  // a match token is used to join the match.
+	_msg = string.Format("Match token: '{0}'", matched.Token);
+  Debug.LogFormat(_msg);
+	
+  // a list of users who've been matched as opponents.
+  foreach (var presence in matched.Presence) {
+    Debug.LogFormat("User id: '{0}'.", presence.UserId);
+    Debug.LogFormat("User handle: '{0}'.", presence.Handle);
+  }
+
+  // list of all match properties
+  foreach (var userProperty in matched.UserProperties) {
+    foreach(KeyValuePair<string, object> entry in userProperty.Properties) {
+      Debug.LogFormat("Property '{0}' for user '{1}' has value '{2}'.", entry.Key, userProperty.Id, entry.Value);
+    }
+
+    foreach(KeyValuePair<string, INMatchmakeFilter> entry in userProperty.Filters) {
+      Debug.LogFormat("Filter '{0}' for user '{1}' has value '{2}'.", entry.Key, userProperty.Id, entry.Value.ToString());
+    }
+  }
+}
 
 
 

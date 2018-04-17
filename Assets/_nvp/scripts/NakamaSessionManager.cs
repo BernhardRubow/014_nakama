@@ -201,5 +201,10 @@ public class NakamaSessionManager : MonoBehaviour {
     _client.Send(message, success, failure);
   }
 
+  public NakamaSessionManager SubscribeOnMatchMakeMatch(Action<INMatchmakeMatched> onMatchMakerMatched){
+    _client.OnMatchmakeMatched = onMatchMakerMatched;
+    return _instance;
+  }
+
 
 }
