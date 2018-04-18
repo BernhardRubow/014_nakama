@@ -21,6 +21,9 @@ public class NakamaSessionManager : MonoBehaviour {
 
 
 
+
+
+
   // +++ fields +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   private INClient _client;
   private INSession _session;
@@ -30,6 +33,10 @@ public class NakamaSessionManager : MonoBehaviour {
 
   private Action _onConnectCallback;
   private Action _onErrorCallback;
+
+  // +++ exposed events +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  public event Action<string> OnShowDebugMessage;
 
 
 
@@ -125,16 +132,21 @@ public class NakamaSessionManager : MonoBehaviour {
 
   private void SessionHandler(INSession session) {
     _session = session;
-    Debug.LogFormat("Session: '{0}'.", session.Token);
+
     var userId = _session.Id;
-    Debug.LogFormat("Session id '{0}' handle '{1}'.", userId, _session.Handle);
-    Debug.LogFormat("Session expired: {0}", _session.HasExpired(DateTime.UtcNow));
+    // Debug.Log(string.Format("Session: '{0}'.", session.Token));
+    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Session: '{0}'.", session.Token)));    
+    // Debug.Log(string.Format("Session id '{0}' handle '{1}'.", userId, _session.Handle));    
+    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Session id '{0}' handle '{1}'.", userId, _session.Handle)));    
+    // Debug.Log(string.Format("Session expired: {0}", _session.HasExpired(DateTime.UtcNow)));
+    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Session expired: {0}", _session.HasExpired(DateTime.UtcNow))));
 
     _client.Connect(_session, (Action<bool>)((bool done) => {
       // We enqueue callbacks which contain code which must be dispatched on
       // the Unity main thread.
       Enqueue((Action)(() => {
-        Debug.Log("Session connected.");
+        // Debug.Log(string.Format("Session connected."));        
+        OnShowDebugMessage(string.Format("Session connected."));
         // Store session for quick reconnects.
         PlayerPrefs.SetString("nk.session", session.Token);
         this._onConnectCallback();
@@ -146,7 +158,8 @@ public class NakamaSessionManager : MonoBehaviour {
     lock (_executionQueue) {
       _executionQueue.Enqueue(ActionWrapper(action));
       if (_executionQueue.Count > 1024) {
-        Debug.LogWarning("Queued actions not consumed fast enough.");
+        // Debug.Log(string.Format("Queued actions not consumed fast enough."));
+        UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Queued actions not consumed fast enough.")));
         _client.Disconnect();
       }
     }
@@ -158,7 +171,7 @@ public class NakamaSessionManager : MonoBehaviour {
   }
 
   private static void ErrorHandler(INError err) {
-    Debug.LogErrorFormat("Error: code '{0}' with '{1}'.", err.Code, err.Message);
+    Debug.LogErrorFormat("Error: code '{0}' with '{1}'.", err.Code, err.Message);    
   }
 
 

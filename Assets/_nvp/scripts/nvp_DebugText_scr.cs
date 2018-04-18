@@ -6,25 +6,43 @@ using UnityEngine.UI;
 public class nvp_DebugText_scr : MonoBehaviour {
 
 	public Text _debugText;
-	private static nvp_DebugText_scr _instance;
-	public static nvp_DebugText_scr GetInstance(){
-		return _instance;
-	}
-	
+	public InputField email;
+	public InputField password;
+	public Button login;
+	public Button join;
+	public Button cancel;
+
+
+	public nvp_LoginManager_scr loginManager;
+
 	void Awake()
 	{
-			if(nvp_DebugText_scr._instance != null) 
-				Destroy(this.gameObject);
-			else 			
-				_instance = this;
+
 	}
 
 	void Start(){
-		_debugText = this.GetComponent<Text>();
+		loginManager.OnLoginSuccessEvent += OnLoginSuccess;
+		loginManager.OnLoginFailureEvent += (s,e) => ChangeDebugText(e);
+	
+		loginManager.OnMatchMakeSuccessEvent += (s,e) => ChangeDebugText(e);
+		loginManager.OnMatchMakeFailureEvent += (s,e) => ChangeDebugText(e);
+
+		NakamaSessionManager.GetInstance().OnShowDebugMessage += (e) => ChangeDebugText(e);
 	}
 
-	public void ChangeDebugText(string newText){
-		_debugText.text = newText;
+	void OnLoginSuccess(object sender, object eventArgs){
+		ChangeDebugText(eventArgs);
+		email.gameObject.SetActive(false);
+		password.gameObject.SetActive(false);
+		login.gameObject.SetActive(false);
+		join.gameObject.SetActive(true);
+		cancel.gameObject.SetActive(true);
 	}
 
+	public void ChangeDebugText(object newText){
+		Debug.Log(newText);
+		UnityMainThreadDispatcher.Instance().Enqueue(
+			() => { _debugText.text += "\n" + newText.ToString(); }
+		);
+	}
 }

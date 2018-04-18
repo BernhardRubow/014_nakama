@@ -11,4 +11,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8caa4b9556333f94f9f8729cdc9672ff, type: 3}
   m_Name: defaultconfig
   m_EditorClassIdentifier: 
-  serverUrl: 127.0.0.1
+  serverUrl: aws.mkwindweb2.de
