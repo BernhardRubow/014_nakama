@@ -28,6 +28,8 @@ public class nvp_DebugText_scr : MonoBehaviour {
 		loginManager.OnMatchMakeFailureEvent += (s,e) => ChangeDebugText(e);
 
 		NakamaSessionManager.GetInstance().OnShowDebugMessage += (e) => ChangeDebugText(e);
+		loginManager.OnShowDebugMessage += (e) => ChangeDebugText(e);
+
 	}
 
 	void OnLoginSuccess(object sender, object eventArgs){

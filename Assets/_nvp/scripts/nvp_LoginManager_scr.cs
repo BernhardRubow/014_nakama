@@ -22,12 +22,14 @@ public class nvp_LoginManager_scr : MonoBehaviour
   public event Action<object, object> OnLoginFailureEvent;
   public event Action<object, object> OnMatchMakeSuccessEvent;
   public event Action<object, object> OnMatchMakeFailureEvent;
+  public event Action<string> OnShowDebugMessage;
 
 
 
 
   // +++ fields +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   INMatchmakeTicket _matchMakeTicket;
+  INMatchmakeMatched _matched;
   string _cancelMatchTicket;
   string _msg;
   string _lastMsg;
@@ -57,6 +59,18 @@ public class nvp_LoginManager_scr : MonoBehaviour
       .MatchMake(2, OnMatchMakeSuccess, OnMatchMakeFailure);
   }
 
+  public void JoinMatch(){
+    var msg = NMatchJoinMessage.Default(_matched.Token);
+    NakamaSessionManager
+      .GetInstance()
+      .GetClient()
+      .Send(msg, OnJoinMatchSuccess, OnJoinMatchFailure);
+  }
+
+  public void CancelMatch(){
+
+  }
+
   // +++ event handler ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   private void OnConnectSuccess()
   {
@@ -75,15 +89,27 @@ public class nvp_LoginManager_scr : MonoBehaviour
 
   private void OnMatchMakeSuccess(INMatchmakeTicket matchTicket)
   {
+    Debug.Log("OnMatchMakeSuccess");
+    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage("OnMatchMakeSuccess")); 
+    
     _matchMakeTicket = matchTicket;
     _cancelMatchTicket = _matchMakeTicket.Ticket;
     _msg = "Added user to matchmaker pool.";
+    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage("Added user to matchmaker pool.")); 
 
     if (OnMatchMakeSuccessEvent != null) OnMatchMakeSuccessEvent(this, _msg);
+
+    // register eventhandler which is called the the server has found opponents
+    // for the user
+    NakamaSessionManager
+      .GetInstance()
+      .GetClient()
+      .OnMatchmakeMatched = OnMatchMakeMatched;
   }
 
   private void OnMatchMakeFailure(INError err)
   {
+    Debug.Log("OnMatchMakeFailure");
     _msg = string.Format("Error: code '{0}' with '{1}'.", err.Code, err.Message);
 
     if (OnMatchMakeFailureEvent != null) OnMatchMakeFailureEvent(this, _msg);
@@ -92,6 +118,7 @@ public class nvp_LoginManager_scr : MonoBehaviour
 
   private void OnMatchMakeMatched(INMatchmakeMatched matched)
   {
+    _matched = matched;
     // a match token is used to join the match.
     _msg = string.Format("Match token: '{0}'", matched.Token);
     Debug.LogFormat(_msg);
@@ -117,4 +144,15 @@ public class nvp_LoginManager_scr : MonoBehaviour
       }
     }
   }
+
+  private void OnJoinMatchSuccess(INResultSet<INMatch> matches){
+    Debug.Log("Successfully joined match");
+    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage("Successfully joined match")); 
+  }
+
+  private void OnJoinMatchFailure(INError error){
+    Debug.LogErrorFormat("Error: code '{0}' with '{1}'.", error.Code, error.Message);
+    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Error: code '{0}' with '{1}'.", error.Code, error.Message))); 
+  }
+
 }
