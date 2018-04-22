@@ -134,18 +134,15 @@ public class NakamaSessionManager : MonoBehaviour {
     _session = session;
 
     var userId = _session.Id;
-    // Debug.Log(string.Format("Session: '{0}'.", session.Token));
-    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Session: '{0}'.", session.Token)));    
-    // Debug.Log(string.Format("Session id '{0}' handle '{1}'.", userId, _session.Handle));    
-    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Session id '{0}' handle '{1}'.", userId, _session.Handle)));    
-    // Debug.Log(string.Format("Session expired: {0}", _session.HasExpired(DateTime.UtcNow)));
-    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Session expired: {0}", _session.HasExpired(DateTime.UtcNow))));
+   
+    OnShowDebugMessage(string.Format("Session: '{0}'.", session.Token));  
+    OnShowDebugMessage(string.Format("Session id '{0}' handle '{1}'.", userId, _session.Handle));   
+    OnShowDebugMessage(string.Format("Session expired: {0}", _session.HasExpired(DateTime.UtcNow)));
 
     _client.Connect(_session, (Action<bool>)((bool done) => {
       // We enqueue callbacks which contain code which must be dispatched on
       // the Unity main thread.
       Enqueue((Action)(() => {
-        // Debug.Log(string.Format("Session connected."));        
         OnShowDebugMessage(string.Format("Session connected."));
         // Store session for quick reconnects.
         PlayerPrefs.SetString("nk.session", session.Token);
@@ -158,8 +155,7 @@ public class NakamaSessionManager : MonoBehaviour {
     lock (_executionQueue) {
       _executionQueue.Enqueue(ActionWrapper(action));
       if (_executionQueue.Count > 1024) {
-        // Debug.Log(string.Format("Queued actions not consumed fast enough."));
-        UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Queued actions not consumed fast enough.")));
+        OnShowDebugMessage(string.Format("Queued actions not consumed fast enough."));
         _client.Disconnect();
       }
     }
@@ -170,8 +166,8 @@ public class NakamaSessionManager : MonoBehaviour {
     yield return null;
   }
 
-  private static void ErrorHandler(INError err) {
-    Debug.LogErrorFormat("Error: code '{0}' with '{1}'.", err.Code, err.Message);    
+  private void ErrorHandler(INError err) {
+    OnShowDebugMessage(string.Format("Error: code '{0}' with '{1}'.", err.Code, err.Message));    
   }
 
 
@@ -208,16 +204,5 @@ public class NakamaSessionManager : MonoBehaviour {
       LoginOrRegisterEmail();
     }
   }
-
-  public void MatchMake(int numberOfPlayers, Action<INMatchmakeTicket> success, Action<INError> failure){
-    var message = NMatchmakeAddMessage.Default(numberOfPlayers);
-    _client.Send(message, success, failure);
-  }
-
-  public NakamaSessionManager SubscribeOnMatchMakeMatch(Action<INMatchmakeMatched> onMatchMakerMatched){
-    _client.OnMatchmakeMatched = onMatchMakerMatched;
-    return _instance;
-  }
-
 
 }

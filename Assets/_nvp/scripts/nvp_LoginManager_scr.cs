@@ -20,8 +20,6 @@ public class nvp_LoginManager_scr : MonoBehaviour
   // +++ exposed events +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   public event Action<object, object> OnLoginSuccessEvent;
   public event Action<object, object> OnLoginFailureEvent;
-  public event Action<object, object> OnMatchMakeSuccessEvent;
-  public event Action<object, object> OnMatchMakeFailureEvent;
   public event Action<string> OnShowDebugMessage;
 
 
@@ -40,9 +38,11 @@ public class nvp_LoginManager_scr : MonoBehaviour
   // +++ custom methods +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   public void Login()
   {
-    Debug.Log("Login pressed");
-    Debug.Log(_user.text);
-    Debug.Log(_password.text);
+    OnShowDebugMessage("Login pressed");
+    OnShowDebugMessage(_user.text);
+    OnShowDebugMessage(_password.text);
+
+
 
     NakamaSessionManager
       .GetInstance()
@@ -53,13 +53,29 @@ public class nvp_LoginManager_scr : MonoBehaviour
 
   private void MakeMatch(int numberOfPlayers)
   {
+    // register event for match make
     NakamaSessionManager
       .GetInstance()
-      .SubscribeOnMatchMakeMatch(OnMatchMakeMatched)
-      .MatchMake(2, OnMatchMakeSuccess, OnMatchMakeFailure);
+      .GetClient()
+      .OnMatchmakeMatched = OnMatchMakeMatched;
+
+    // send message to make match
+    var msg = NMatchmakeAddMessage.Default(2);
+    NakamaSessionManager
+      .GetInstance()
+      .GetClient()
+      .Send(
+        msg,
+        OnMatchMakeSuccess,
+        OnMatchMakeFailure);
   }
 
   public void JoinMatch(){
+    OnShowDebugMessage("Join Match clicked");
+    if(_matched == null){
+      OnShowDebugMessage("Not matched");
+      return;
+    }
     var msg = NMatchJoinMessage.Default(_matched.Token);
     NakamaSessionManager
       .GetInstance()
@@ -68,13 +84,13 @@ public class nvp_LoginManager_scr : MonoBehaviour
   }
 
   public void CancelMatch(){
-
+    OnShowDebugMessage("Cancel Match clicked");
   }
 
   // +++ event handler ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   private void OnConnectSuccess()
   {
-    Debug.Log("OnConnected custom");
+    OnShowDebugMessage("OnConnected custom");
 
     if (OnLoginSuccessEvent != null) OnLoginSuccessEvent(this, "success");
 
@@ -83,21 +99,18 @@ public class nvp_LoginManager_scr : MonoBehaviour
   }
   private void OnConnectFailure()
   {
-    Debug.Log("OnError custom");
+    OnShowDebugMessage("OnError custom");
     if (OnLoginFailureEvent != null) OnLoginFailureEvent(this, "login failure");
   }
 
   private void OnMatchMakeSuccess(INMatchmakeTicket matchTicket)
   {
-    Debug.Log("OnMatchMakeSuccess");
-    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage("OnMatchMakeSuccess")); 
+    OnShowDebugMessage("OnMatchMakeSuccess");    
     
     _matchMakeTicket = matchTicket;
     _cancelMatchTicket = _matchMakeTicket.Ticket;
     _msg = "Added user to matchmaker pool.";
-    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage("Added user to matchmaker pool.")); 
-
-    if (OnMatchMakeSuccessEvent != null) OnMatchMakeSuccessEvent(this, _msg);
+    OnShowDebugMessage("Added user to matchmaker pool.");     
 
     // register eventhandler which is called the the server has found opponents
     // for the user
@@ -109,11 +122,8 @@ public class nvp_LoginManager_scr : MonoBehaviour
 
   private void OnMatchMakeFailure(INError err)
   {
-    Debug.Log("OnMatchMakeFailure");
-    _msg = string.Format("Error: code '{0}' with '{1}'.", err.Code, err.Message);
-
-    if (OnMatchMakeFailureEvent != null) OnMatchMakeFailureEvent(this, _msg);
-
+    OnShowDebugMessage("OnMatchMakeFailure");
+    OnShowDebugMessage(string.Format("Error: code '{0}' with '{1}'.", err.Code, err.Message));    
   }
 
   private void OnMatchMakeMatched(INMatchmakeMatched matched)
@@ -121,13 +131,13 @@ public class nvp_LoginManager_scr : MonoBehaviour
     _matched = matched;
     // a match token is used to join the match.
     _msg = string.Format("Match token: '{0}'", matched.Token);
-    Debug.LogFormat(_msg);
+    OnShowDebugMessage(_msg);
 
     // a list of users who've been matched as opponents.
     foreach (var presence in matched.Presence)
     {
-      Debug.LogFormat("User id: '{0}'.", presence.UserId);
-      Debug.LogFormat("User handle: '{0}'.", presence.Handle);
+      OnShowDebugMessage(string.Format("User id: '{0}'.", presence.UserId));
+      OnShowDebugMessage(string.Format("User handle: '{0}'.", presence.Handle));
     }
 
     // list of all match properties
@@ -135,24 +145,22 @@ public class nvp_LoginManager_scr : MonoBehaviour
     {
       foreach (KeyValuePair<string, object> entry in userProperty.Properties)
       {
-        Debug.LogFormat("Property '{0}' for user '{1}' has value '{2}'.", entry.Key, userProperty.Id, entry.Value);
+        OnShowDebugMessage(string.Format("Property '{0}' for user '{1}' has value '{2}'.", entry.Key, userProperty.Id, entry.Value));
       }
 
       foreach (KeyValuePair<string, INMatchmakeFilter> entry in userProperty.Filters)
       {
-        Debug.LogFormat("Filter '{0}' for user '{1}' has value '{2}'.", entry.Key, userProperty.Id, entry.Value.ToString());
+        OnShowDebugMessage(string.Format("Filter '{0}' for user '{1}' has value '{2}'.", entry.Key, userProperty.Id, entry.Value.ToString()));
       }
     }
   }
 
   private void OnJoinMatchSuccess(INResultSet<INMatch> matches){
-    Debug.Log("Successfully joined match");
-    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage("Successfully joined match")); 
+    OnShowDebugMessage("Successfully joined match"); 
   }
 
   private void OnJoinMatchFailure(INError error){
-    Debug.LogErrorFormat("Error: code '{0}' with '{1}'.", error.Code, error.Message);
-    UnityMainThreadDispatcher.Instance().Enqueue(() => OnShowDebugMessage(string.Format("Error: code '{0}' with '{1}'.", error.Code, error.Message))); 
+    OnShowDebugMessage(string.Format("Error: code '{0}' with '{1}'.", error.Code, error.Message)); 
   }
 
 }
