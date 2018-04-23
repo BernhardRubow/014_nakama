@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.Events;
 using System;
 
+using newvisionsproject.managers.events;
 using Nakama;
 
 public class nvp_LoginManager_scr : MonoBehaviour
@@ -32,55 +33,53 @@ public class nvp_LoginManager_scr : MonoBehaviour
   string _msg;
   string _lastMsg;
 
+  // +++ unity life cycle +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  void Start(){
+    // subscribe to events
+
+    // nakama events
+    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onNakamaLoginSuccess, onNakamaConnectSuccess);
+    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onNakamaLoginFailure, onNakamaConnectFailure);
+
+
+  }
 
 
 
   // +++ custom methods +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  public void Login()
-  {
-    OnShowDebugMessage("Login pressed");
-    OnShowDebugMessage(_user.text);
-    OnShowDebugMessage(_password.text);
 
-
-
-    NakamaSessionManager
-      .GetInstance()
-      .SetUser(_user.text, _password.text)
-      .SetConnectCallback(OnConnectSuccess, OnConnectFailure)
-      .Connect();
-  }
 
   private void MakeMatch(int numberOfPlayers)
   {
-    // register event for match make
-    NakamaSessionManager
-      .GetInstance()
-      .GetClient()
-      .OnMatchmakeMatched = OnMatchMakeMatched;
+    // // register event for match make
+    // NakamaSessionManager
+    //   .GetInstance()
+    //   .GetClient()
+    //   .OnMatchmakeMatched = OnMatchMakeMatched;
 
-    // send message to make match
-    var msg = NMatchmakeAddMessage.Default(2);
-    NakamaSessionManager
-      .GetInstance()
-      .GetClient()
-      .Send(
-        msg,
-        OnMatchMakeSuccess,
-        OnMatchMakeFailure);
+    // // send message to make match
+    // var msg = NMatchmakeAddMessage.Default(2);
+    // NakamaSessionManager
+    //   .GetInstance()
+    //   .GetClient()
+    //   .Send(
+    //     msg,
+    //     OnMatchMakeSuccess,
+    //     OnMatchMakeFailure);
   }
 
   public void JoinMatch(){
-    OnShowDebugMessage("Join Match clicked");
-    if(_matched == null){
-      OnShowDebugMessage("Not matched");
-      return;
-    }
-    var msg = NMatchJoinMessage.Default(_matched.Token);
-    NakamaSessionManager
-      .GetInstance()
-      .GetClient()
-      .Send(msg, OnJoinMatchSuccess, OnJoinMatchFailure);
+    // OnShowDebugMessage("Join Match clicked");
+    // if(_matched == null){
+    //   OnShowDebugMessage("Not matched");
+    //   return;
+    // }
+    // var msg = NMatchJoinMessage.Default(_matched.Token);
+    // NakamaSessionManager
+    //   .GetInstance()
+    //   .GetClient()
+    //   .Send(msg, OnJoinMatchSuccess, OnJoinMatchFailure);
   }
 
   public void CancelMatch(){
@@ -105,19 +104,19 @@ public class nvp_LoginManager_scr : MonoBehaviour
 
   private void OnMatchMakeSuccess(INMatchmakeTicket matchTicket)
   {
-    OnShowDebugMessage("OnMatchMakeSuccess");    
+    // OnShowDebugMessage("OnMatchMakeSuccess");    
     
-    _matchMakeTicket = matchTicket;
-    _cancelMatchTicket = _matchMakeTicket.Ticket;
-    _msg = "Added user to matchmaker pool.";
-    OnShowDebugMessage("Added user to matchmaker pool.");     
+    // _matchMakeTicket = matchTicket;
+    // _cancelMatchTicket = _matchMakeTicket.Ticket;
+    // _msg = "Added user to matchmaker pool.";
+    // OnShowDebugMessage("Added user to matchmaker pool.");     
 
-    // register eventhandler which is called the the server has found opponents
-    // for the user
-    NakamaSessionManager
-      .GetInstance()
-      .GetClient()
-      .OnMatchmakeMatched = OnMatchMakeMatched;
+    // // register eventhandler which is called the the server has found opponents
+    // // for the user
+    // NakamaSessionManager
+    //   .GetInstance()
+    //   .GetClient()
+    //   .OnMatchmakeMatched = OnMatchMakeMatched;
   }
 
   private void OnMatchMakeFailure(INError err)
@@ -157,10 +156,32 @@ public class nvp_LoginManager_scr : MonoBehaviour
 
   private void OnJoinMatchSuccess(INResultSet<INMatch> matches){
     OnShowDebugMessage("Successfully joined match"); 
+
+    // internal list of connected opponents
+    List<INUserPresence> connectedOpponents = new List<INUserPresence>();
+    // add list of connected opponents
+    connectedOpponents.AddRange(matches.Results[0].Presence);
+    // Remove your own user from the list
+    connectedOpponents.Remove(matches.Results[0].Self);
+
+    foreach(var presence in connectedOpponents){
+      var userId = presence.UserId;
+      var handle = presence.Handle;
+      OnShowDebugMessage(string.Format("Connected User id: {0} with handle: {0}", userId, handle));
+    }
   }
 
   private void OnJoinMatchFailure(INError error){
     OnShowDebugMessage(string.Format("Error: code '{0}' with '{1}'.", error.Code, error.Message)); 
+  }
+
+  // +++ nvp eventhandler +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  private void onNakamaConnectSuccess(object sender, object eventArgs){
+
+  }
+
+  private void onNakamaConnectFailure(object sender, object eventArgs){
+
   }
 
 }
