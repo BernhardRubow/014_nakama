@@ -1057,7 +1057,7 @@ MonoBehaviour:
   matchMaker: {fileID: 2080239625}
   createMatch: {fileID: 190839002}
   joinMatch: {fileID: 1851587590}
-  matchIdToJoin: {fileID: 0}
+  matchIdToJoin: {fileID: 1650473979}
   leaveMatch: {fileID: 1749468756}
 --- !u!4 &827042794
 Transform:
@@ -2316,7 +2316,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 827042793}
         m_MethodName: JoinMatch
         m_Mode: 1
         m_Arguments:

@@ -20,7 +20,8 @@ namespace newvisionsproject.managers.events
     onNakamaAddedToMatchMakerPool,
     onAddLogMessage,
     onUiCreateMatchClicked,
-    onUiJoinMatchClicked
+    onUiJoinMatchClicked,
+      onNakamaCreateMatchSuccess
   }
 
   public class nvp_EventManager_scr : MonoBehaviour

@@ -25,6 +25,7 @@ public class nvp_NetworkUiManager_scr : MonoBehaviour {
 		nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onNakamaConnectSuccess, onNakamaConnectSuccess);
 		nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onNakamaAddedToMatchMakerPool, onNakamaAddedToMatchMakerPool);
 		nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onAddLogMessage, onAppendToLogMessage);
+	    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onNakamaCreateMatchSuccess, onCreateMatchSuccess);
 	}
 	
 
@@ -45,10 +46,15 @@ public class nvp_NetworkUiManager_scr : MonoBehaviour {
 		AppendToNetworkLog(eventArgs);
 	}
 
+    private void onCreateMatchSuccess(object sender, object EventArgs)
+    {
+        matchIdToJoin.text = EventArgs.ToString();
+    }
 
-	// +++ public exposed methods for UI callbacks ++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	public void Login(){
+    // +++ public exposed methods for UI callbacks ++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    public void Login(){
 		Debug.Log("UiManager: Login clicked");
 		if(email.text == "w")
 			nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onUiLoginClicked,this, new string[] {"wrubow@nvp.de", "test1234#"});			

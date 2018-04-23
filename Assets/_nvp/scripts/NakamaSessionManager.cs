@@ -34,6 +34,7 @@ public class NakamaSessionManager : MonoBehaviour
   INMatchmakeTicket _ticket;
   string _cancelticket;
   string _matchId;
+  List<INUserPresence> _connectedOpponents = new List<INUserPresence>();
 
   private Queue<IEnumerator> _executionQueue;
   private string _user;
@@ -288,8 +289,57 @@ public class NakamaSessionManager : MonoBehaviour
     string id = match.Id;
 
     Enqueue(() =>
-      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, string.Format("Match created: Id {0}", id))
+    {
+      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, string.Format("Match created: Id {0}", id));
+      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onNakamaCreateMatchSuccess, this, id);
+    });
+  }
+
+  private void onJoinedMatch(INResultSet<INMatch> matches)
+  {
+    Enqueue(() =>
+      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, "Successfully joined match.")
     );
+
+    _connectedOpponents = new List<INUserPresence>();
+    // Add list of connected opponents.
+    _connectedOpponents.AddRange(matches.Results[0].Presence);
+    // Remove your own user from list.
+    _connectedOpponents.Remove(matches.Results[0].Self);
+
+    foreach (var presence in _connectedOpponents)
+    {
+      var userId = presence.UserId;
+      var handle = presence.Handle;
+      Enqueue(() =>
+        nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, "User id '" + userId + "' handle " + handle)
+      );
+    }
+  }
+
+  private void OnMatchPresence(INMatchPresence presences)
+  {
+
+    Enqueue(() =>
+      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, "Connected Opponents changed:")
+    );
+
+    // Remove all users who left.
+    foreach (var user in presences.Leave)
+    {
+      _connectedOpponents.Remove(user);
+    }
+    // Add all users who joined.
+    _connectedOpponents.AddRange(presences.Join);
+
+    foreach (var presence in _connectedOpponents)
+    {
+      var userId = presence.UserId;
+      var handle = presence.Handle;
+      Enqueue(() =>
+        nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, "User id '" + userId + "' handle " + handle)      
+      );
+    }
   }
 
 
@@ -316,6 +366,36 @@ public class NakamaSessionManager : MonoBehaviour
     }
   }
 
+  private void MakeMatch()
+  {
+    _ticket = null;
+
+    // register an even handler for events of possible opponents
+    _client.OnMatchmakeMatched = onMatchmakeMatched;
+
+
+    var msg = NMatchmakeAddMessage.Default(2);
+    _client.Send(msg, onMatchMake, ErrorHandler);
+  }
+
+  private void CreateMatch()
+  {
+    var msg = NMatchCreateMessage.Default();
+
+    _client.OnMatchPresence = OnMatchPresence;
+
+    _client.Send(msg, onMatchCreated, ErrorHandler);
+  }
+
+  private void JoinMatch(string id)
+  {
+    var message = NMatchJoinMessage.Default(id);
+    _client.Send(
+      message,
+      onJoinedMatch,
+      ErrorHandler);
+  }
+
 
 
 
@@ -333,61 +413,18 @@ public class NakamaSessionManager : MonoBehaviour
 
   private void onMakeMatchClicked(object sender, object eventArgs)
   {
-    _ticket = null;
-
-    // register an even handler for events of possible opponents
-    _client.OnMatchmakeMatched = onMatchmakeMatched;
-
-
-    var msg = NMatchmakeAddMessage.Default(2);
-    _client.Send(msg, onMatchMake, ErrorHandler);
+    MakeMatch();
   }
 
   private void onCreateMatchClicked(object sender, object eventArgs)
   {
-
-    var msg = NMatchCreateMessage.Default();
-
-    _client.Send(msg, onMatchCreated, ErrorHandler);
+    CreateMatch();
   }
 
   private void onJoinMatchClicked(object sender, object eventArgs)
   {
 
-    string id = eventArgs.ToString(); // an INMatch Id.
-
-    Enqueue(() =>
-      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, "join match with id : " + id)
-    );
-
-    var message = NMatchJoinMessage.Default(id);
-    _client.Send(message, (INResultSet<INMatch> matches) =>
-    {
-      Enqueue(() => 
-        nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, "Successfully joined match.")
-      );
-
-
-      List<INUserPresence> connectedOpponents = new List<INUserPresence>();
-      // Add list of connected opponents.
-      connectedOpponents.AddRange(matches.Results[0].Presence);
-      // Remove your own user from list.
-      connectedOpponents.Remove(matches.Results[0].Self);
-
-      foreach (var presence in connectedOpponents)
-      {
-        var userId = presence.UserId;
-        var handle = presence.Handle;
-        Enqueue(() =>
-          nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this,  "User id '" + userId + "' handle " + handle)
-        );
-      }
-    }, (INError err) =>
-    {
-      Enqueue(() =>
-          nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this,  "Error: code '" + err.Code+ "' with '" + err.Message+ "'.")
-      );
-    });
+    string id = eventArgs.ToString();
+    JoinMatch(id);
   }
-
 }
