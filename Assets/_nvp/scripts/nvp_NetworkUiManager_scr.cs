@@ -56,13 +56,12 @@ public class nvp_NetworkUiManager_scr : MonoBehaviour {
 
     public void Login(){
 		Debug.Log("UiManager: Login clicked");
-		if(email.text == "w")
-			nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onUiLoginClicked,this, new string[] {"wrubow@nvp.de", "test1234#"});			
-		else if (email.text == "b")
-			nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onUiLoginClicked,this, new string[] {"brubow@nvp.de", "test1234#"});
+		if(email.text == "1")
+			nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onUiLoginClicked,this, new string[] {"user1@nvp.de", "test1234#"});			
+		else if (email.text == "2")
+			nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onUiLoginClicked,this, new string[] {"user2@nvp.de", "test1234#"});
 		else
-			nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onUiLoginClicked,this, new string[] {email.text, passwd.text});
-			
+			nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onUiLoginClicked,this, new string[] {email.text, passwd.text});			
 	}
 
 	public void MakeMatch(){

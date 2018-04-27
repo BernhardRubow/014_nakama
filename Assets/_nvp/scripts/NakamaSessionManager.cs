@@ -26,8 +26,6 @@ public class NakamaSessionManager : MonoBehaviour
 
 
 
-
-
   // +++ fields +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   private INClient _client;
   private INSession _session;
@@ -35,7 +33,6 @@ public class NakamaSessionManager : MonoBehaviour
   string _cancelticket;
   string _matchId;
   List<INUserPresence> _connectedOpponents = new List<INUserPresence>();
-
   private Queue<IEnumerator> _executionQueue;
   private string _user;
   private string _password;
@@ -70,11 +67,11 @@ public class NakamaSessionManager : MonoBehaviour
 
   private void Start()
   {
-    // subscribe to event
-    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiLoginClicked, onLoginClicked);
-    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiMakeMatchClicked, onMakeMatchClicked);
-    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiCreateMatchClicked, onCreateMatchClicked);
-    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiJoinMatchClicked, onJoinMatchClicked);
+    // subscribe to events
+    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiLoginClicked, onLogin);
+    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiMakeMatchClicked, onMakeMatch);
+    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiCreateMatchClicked, onCreateMatch);
+    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiJoinMatchClicked, onJoinMatch);
   }
 
   private void Update()
@@ -239,8 +236,12 @@ public class NakamaSessionManager : MonoBehaviour
       nvp_EventManager_scr.INSTANCE.InvokeEvent(
         GameEvents.onNakamaLoginFailure,
         this,
-        new ArrayList() { "User not found", err });
-      Debug.LogError(err.Message);
+        new ArrayList() { "User not found", err }
+      );
+      Enqueue(() => Debug.LogError(err.Message));
+
+      // if user is not found register him  
+      Nakama_RegisterEmail();
     }
     else
     {
@@ -264,24 +265,35 @@ public class NakamaSessionManager : MonoBehaviour
   {
     Debug.Log("here");
     _ticket = ticket;
-    this.Enqueue(() => nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, "Added to matchmaker-pool"));
-    //nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onNakamaAddedToMatchMakerPool, this, null);
+    Enqueue(
+      () => nvp_EventManager_scr.INSTANCE.InvokeEvent(
+        GameEvents.onAddLogMessage, 
+        this, 
+        "Added to matchmaker-pool"
+      )
+    );
   }
 
   private void onMatchmakeMatched(INMatchmakeMatched matched)
   {
     // a match token is used to join the match.
-    Enqueue(() =>
-      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, string.Format("Match token: '{0}'", matched.Token))
+    Enqueue(
+      () => nvp_EventManager_scr.INSTANCE.InvokeEvent(
+        GameEvents.onAddLogMessage, 
+        this, 
+        string.Format("Match token: '{0}'", matched.Token)
+      )
     );
 
     LogMatchMakeMatchedData(matched);
 
-    Enqueue(() =>
-      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onNakamaMakeMatchSuccess, this, matched)
+    Enqueue(
+      () => nvp_EventManager_scr.INSTANCE.InvokeEvent(
+        GameEvents.onNakamaMakeMatchSuccess, 
+        this, 
+        matched
+      )
     );
-
-
   }
 
   private void onMatchCreated(INMatch match)
@@ -400,10 +412,8 @@ public class NakamaSessionManager : MonoBehaviour
 
 
   // +++ external event handler +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  private void onLoginClicked(object sender, object eventArgs)
+  private void onLogin(object sender, object eventArgs)
   {
-    Debug.Log("SessionManager: onLoginClicked called");
     var data = (string[])eventArgs;
     string email = data[0];
     string passwd = data[1];
@@ -411,17 +421,17 @@ public class NakamaSessionManager : MonoBehaviour
     LoginEmail(email, passwd);
   }
 
-  private void onMakeMatchClicked(object sender, object eventArgs)
+  private void onMakeMatch(object sender, object eventArgs)
   {
     MakeMatch();
   }
 
-  private void onCreateMatchClicked(object sender, object eventArgs)
+  private void onCreateMatch(object sender, object eventArgs)
   {
     CreateMatch();
   }
 
-  private void onJoinMatchClicked(object sender, object eventArgs)
+  private void onJoinMatch(object sender, object eventArgs)
   {
 
     string id = eventArgs.ToString();

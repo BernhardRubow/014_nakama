@@ -12,9 +12,7 @@ public class nvp_DebugText_scr : MonoBehaviour {
 	public Button join;
 	public Button cancel;
 
-
-	public nvp_LoginManager_scr loginManager;
-
+	
 	void Awake()
 	{
 
