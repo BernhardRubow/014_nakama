@@ -7,21 +7,21 @@ namespace newvisionsproject.managers.events
 {
   public enum GameEvents
   {
-		onNakamaLoginSuccess,
-		onNakamaLoginFailure,
-		onNakamaConnectSuccess,
-		onNakamaConnectFailure,
-		onNakamaMakeMatchSuccess,
-		onNakamaMakeMatchFailure,
-		onNakamaJoinMatchSuccess,
-		onNakamaJoinMatchFailure,
+    onNakamaLoginSuccess,
+    onNakamaLoginFailure,
+    onNakamaConnected,
+    onNakamaConnectFailure,
+    onNakamaMakeMatchSuccess,
+    onNakamaMatchJoined,
     onUiLoginClicked,
     onUiMakeMatchClicked,
     onNakamaAddedToMatchMakerPool,
     onAddLogMessage,
     onUiCreateMatchClicked,
     onUiJoinMatchClicked,
-      onNakamaCreateMatchSuccess
+    onNakamaMatchCreated,
+    onSendRealtimeMessageClicked,
+    OnNakamPresencesChanged
   }
 
   public class nvp_EventManager_scr : MonoBehaviour
@@ -33,7 +33,7 @@ namespace newvisionsproject.managers.events
 
 
     void Awake()
-    {      
+    {
       if (nvp_EventManager_scr.INSTANCE != null)
       {
         Destroy(this.gameObject);
@@ -73,7 +73,7 @@ namespace newvisionsproject.managers.events
     public void InvokeEvent(GameEvents e, object sender, object eventArgs)
     {
       if (!eventCallbacks.ContainsKey(e)) return;
-      
+
       foreach (var observer in eventCallbacks[e])
         observer(sender, eventArgs);
     }
