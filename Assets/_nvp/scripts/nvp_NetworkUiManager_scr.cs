@@ -144,7 +144,7 @@ public class nvp_NetworkUiManager_scr : MonoBehaviour
     matchMaker.gameObject.SetActive(false);
 		createMatch.gameObject.SetActive(false);
 		joinMatch.gameObject.SetActive(false);
-		matchIdToJoin.gameObject.SetActive(false);
+		//matchIdToJoin.gameObject.SetActive(false);
   }
 
 	void EnableGameUI(){

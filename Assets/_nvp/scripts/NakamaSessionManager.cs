@@ -72,6 +72,7 @@ public class NakamaSessionManager : MonoBehaviour
     nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiMakeMatchClicked, onMakeMatch);
     nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiCreateMatchClicked, onCreateMatch);
     nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onUiJoinMatchClicked, onJoinMatch);
+    nvp_EventManager_scr.INSTANCE.SubscribeToEvent(GameEvents.onSendRealtimeMessageClicked, onSendMessage);
   }
 
   private void Update()
@@ -178,6 +179,7 @@ public class NakamaSessionManager : MonoBehaviour
 
   private void LogMatchMakeMatchedData(INMatchmakeMatched matched)
   {
+    return;
     // a list of users who've been matched as opponents.
     foreach (var presence in matched.Presence)
     {
@@ -227,6 +229,7 @@ public class NakamaSessionManager : MonoBehaviour
 
   private void LogJoinedMatchData(INResultSet<INMatch> matches)
   {
+    return;
     Enqueue(() =>
           nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, "Successfully joined match.")
         );
@@ -322,6 +325,11 @@ public class NakamaSessionManager : MonoBehaviour
 
   private void onMatchmakeMatched(INMatchmakeMatched matched)
   {
+    _matchId = matched.Token.Token;
+    var msg =  NMatchJoinMessage.Default(matched.Token);
+    _client.Send(msg, onJoinedMatch, ErrorHandler);
+
+
     // a match token is used to join the match.
     Enqueue(
       () => nvp_EventManager_scr.INSTANCE.InvokeEvent(
@@ -338,7 +346,7 @@ public class NakamaSessionManager : MonoBehaviour
         GameEvents.onNakamaMakeMatchSuccess,
         this,
         matched
-      )      
+      )
     );
 
     Enqueue(
@@ -348,19 +356,22 @@ public class NakamaSessionManager : MonoBehaviour
 
   private void onMatchCreated(INMatch match)
   {
-    string id = match.Id;
+    _matchId = match.Id;
 
     Enqueue(() =>
     {
-      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, string.Format("Match created: Id {0}", id));
-      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onNakamaMatchCreated, this, id);
-      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onNakamaMatchJoined, this, null);
+      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onAddLogMessage, this, string.Format("Match created: Id {0}", _matchId));
+      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onNakamaMatchCreated, this, _matchId);
+      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onNakamaMatchJoined, this, _matchId);
     });
   }
 
   private void onJoinedMatch(INResultSet<INMatch> matches)
   {
-    LogJoinedMatchData(matches);
+    //LogJoinedMatchData(matches);
+    Enqueue(() => {
+      nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.onNakamaMatchJoined, this, null);
+    });
   }
 
   private void OnMatchPresenceChanged(INMatchPresence presences)
@@ -370,7 +381,24 @@ public class NakamaSessionManager : MonoBehaviour
     nvp_EventManager_scr.INSTANCE.InvokeEvent(GameEvents.OnNakamPresencesChanged, this, presences);
   }
 
+  private void OnMatchDataReceived(INMatchData matchData)
+  {
+    var content = System.Text.Encoding.UTF8.GetString(matchData.Data);
+    switch (matchData.OpCode)
+    {
+      case 001L:
+        Debug.Log("A custom opcode");
+        Debug.LogFormat("Userhandle {0} sent: {1}", matchData.Presence.Handle, content);
+        break;
+      default:
+        Debug.LogFormat("Userhandle {0} sent: {1}", matchData.Presence.Handle, content);
+        break;
+    }
+  }
 
+  private void onMessageSent(bool done){
+    Debug.LogFormat("message send: {0}: ", done);
+  }
 
 
 
@@ -401,6 +429,11 @@ public class NakamaSessionManager : MonoBehaviour
     JoinMatch(id);
   }
 
+  private void onSendMessage(object sender, object eventArgs){
+    Debug.Log("nakam session manager: onSendMessageCalled");
+    SendMessage(eventArgs as string);
+  }
+
 
 
 
@@ -418,7 +451,7 @@ public class NakamaSessionManager : MonoBehaviour
       .SSL(false)
       .Build();
 
-    RestoreSessionAndConnect();
+    //RestoreSessionAndConnect();
     if (_session == null)
     {
       Nakama_LoginEmail();
@@ -429,8 +462,13 @@ public class NakamaSessionManager : MonoBehaviour
   {
     _ticket = null;
 
-    // register an even handler for events of possible opponents
+    // register an event handler for events of possible opponents
     _client.OnMatchmakeMatched = onMatchmakeMatched;
+
+    _client.OnMatchPresence = OnMatchPresenceChanged;
+
+    // register an event handler for in game messages
+    _client.OnMatchData = OnMatchDataReceived;
 
 
     var msg = NMatchmakeAddMessage.Default(2);
@@ -443,16 +481,35 @@ public class NakamaSessionManager : MonoBehaviour
 
     _client.OnMatchPresence = OnMatchPresenceChanged;
 
+    // register an event handler for in game messages
+    _client.OnMatchData = OnMatchDataReceived;
+
     _client.Send(msg, onMatchCreated, ErrorHandler);
   }
 
   private void JoinMatch(string id)
   {
+    _matchId = id;
+
+    _client.OnMatchPresence = OnMatchPresenceChanged;
+
+    // register an event handler for in game messages
+    _client.OnMatchData = OnMatchDataReceived;
+
     var message = NMatchJoinMessage.Default(id);
     _client.Send(
       message,
       onJoinedMatch,
       ErrorHandler);
+  }
+
+  private void SendMessage(string content){
+
+    long opcode = 001L;
+    byte[] data = System.Text.Encoding.UTF8.GetBytes("{\"move\": {\"dir\": \"left\", \"steps\": 4}}");
+
+    var msg = NMatchDataSendMessage.Default(_matchId, opcode, data);
+    _client.Send(msg, onMessageSent, ErrorHandler);
   }
 
 }
